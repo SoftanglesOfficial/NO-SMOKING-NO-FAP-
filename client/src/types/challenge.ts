@@ -1,5 +1,4 @@
-export interface Challenge {
-  deviceId: string;
+export interface StoredChallenge {
   challengeName: string;
   startDate: string;
   lastResetDate: string;
@@ -7,6 +6,6 @@ export interface Challenge {
   isActive: boolean;
 }
 
-export interface ChallengeResponse extends Challenge {
+export interface Challenge extends StoredChallenge {
   currentStreak: number;
 }

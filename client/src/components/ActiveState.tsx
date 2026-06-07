@@ -4,7 +4,7 @@ import { GlowButton } from './GlowButton';
 import { PersonalBest } from './PersonalBest';
 import { StreakCounter } from './StreakCounter';
 import { colors, spacing, typography } from '../theme/colors';
-import { Challenge } from '../api/types';
+import { Challenge } from '../types/challenge';
 
 interface ActiveStateProps {
   challenge: Challenge;

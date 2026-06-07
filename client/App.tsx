@@ -1,133 +1,113 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  AppState,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import {
-  breakStreak as breakStreakApi,
-  getApiErrorMessage,
-  getChallenge,
-  startChallenge as startChallengeApi,
-} from './src/api/client';
-import { Challenge } from './src/api/types';
 import { HomeScreen } from './src/screens/HomeScreen';
-import { getOrCreateDeviceId } from './src/services/DeviceService';
 import { NotificationService } from './src/services/NotificationService';
+import { StorageService } from './src/services/StorageService';
+import { Challenge } from './src/types/challenge';
 import { colors, spacing } from './src/theme/colors';
-
-const MANUAL_DEVICE_ID = 'manual-device-123';
-const DEVICE_ID_TIMEOUT_MS = 2000;
-const EMERGENCY_TIMEOUT_MS = 5000;
-
-async function resolveDeviceId(): Promise<string> {
-  try {
-    const id = await Promise.race([
-      getOrCreateDeviceId(),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error('Device ID timeout')),
-          DEVICE_ID_TIMEOUT_MS,
-        ),
-      ),
-    ]);
-    return id;
-  } catch {
-    return MANUAL_DEVICE_ID;
-  }
-}
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
-  const [deviceId, setDeviceId] = useState<string | null>(null);
   const [challenge, setChallenge] = useState<Challenge | null>(null);
-  const [networkError, setNetworkError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const bootstrap = useCallback(async () => {
+  const loadChallenge = useCallback(async () => {
     setIsLoading(true);
-    setNetworkError(null);
-
-    const emergencyTimer = setTimeout(() => {
-      setIsLoading(false);
-    }, EMERGENCY_TIMEOUT_MS);
+    setError(null);
 
     try {
-      const id = await resolveDeviceId();
-      setDeviceId(id);
+      const data = await StorageService.getChallenge();
+      setChallenge(data);
 
-      const data = await getChallenge(id);
-
-      if (data === null) {
-        setChallenge(null);
-      } else {
-        setChallenge(data);
-        if (data.isActive) {
-          NotificationService.scheduleDailyReminder(
-            data.challengeName,
-            data.currentStreak,
-          ).catch(() => undefined);
-        }
+      if (data?.isActive) {
+        NotificationService.scheduleDailyReminder(
+          data.challengeName,
+          data.currentStreak,
+        ).catch(() => undefined);
       }
     } catch (err: unknown) {
-      setNetworkError(
-        getApiErrorMessage(err) ||
-          (err instanceof Error ? err.message : 'Something went wrong'),
-      );
+      setError(err instanceof Error ? err.message : 'Failed to load challenge');
       setChallenge(null);
     } finally {
-      clearTimeout(emergencyTimer);
       setIsLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    bootstrap().then(() => {
+    loadChallenge().then(() => {
       NotificationService.requestPermissionsOnLaunch().catch(() => undefined);
     });
-  }, [bootstrap]);
+  }, [loadChallenge]);
 
-  const handleStartChallenge = useCallback(
-    async (challengeName: string) => {
-      if (!deviceId) {
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') {
         return;
       }
 
-      setActionLoading(true);
-      try {
-        const data = await startChallengeApi({ deviceId, challengeName });
-        setChallenge(data);
-        setNetworkError(null);
-        NotificationService.scheduleDailyReminder(
-          data.challengeName,
-          data.currentStreak,
-        ).catch(() => undefined);
-      } catch (err: unknown) {
-        setNetworkError(getApiErrorMessage(err) || 'Failed to start challenge');
-        throw err;
-      } finally {
-        setActionLoading(false);
-      }
-    },
-    [deviceId],
-  );
+      StorageService.getChallenge()
+        .then((data) => {
+          setChallenge(data);
+          if (data?.isActive) {
+            NotificationService.scheduleDailyReminder(
+              data.challengeName,
+              data.currentStreak,
+            ).catch(() => undefined);
+          }
+        })
+        .catch(() => undefined);
+    });
 
-  const handleBreakStreak = useCallback(async () => {
-    if (!deviceId) {
-      return;
-    }
+    return () => subscription.remove();
+  }, []);
 
+  const handleStartChallenge = useCallback(async (challengeName: string) => {
     setActionLoading(true);
+    setError(null);
+
     try {
-      const data = await breakStreakApi({ deviceId });
+      const data = await StorageService.startChallenge(challengeName);
       setChallenge(data);
-      setNetworkError(null);
-      NotificationService.cancelDailyReminder().catch(() => undefined);
+      await NotificationService.scheduleDailyReminder(
+        data.challengeName,
+        data.currentStreak,
+      );
     } catch (err: unknown) {
-      setNetworkError(getApiErrorMessage(err) || 'Failed to break streak');
+      const message =
+        err instanceof Error ? err.message : 'Failed to start challenge';
+      setError(message);
       throw err;
     } finally {
       setActionLoading(false);
     }
-  }, [deviceId]);
+  }, []);
+
+  const handleBreakStreak = useCallback(async () => {
+    setActionLoading(true);
+    setError(null);
+
+    try {
+      const data = await StorageService.breakStreak();
+      setChallenge(data);
+      await NotificationService.cancelDailyReminder();
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : 'Failed to break streak';
+      setError(message);
+      throw err;
+    } finally {
+      setActionLoading(false);
+    }
+  }, []);
 
   return (
     <SafeAreaProvider>
@@ -142,10 +122,9 @@ export default function App() {
           <HomeScreen
             challenge={challenge}
             actionLoading={actionLoading}
+            error={error}
             onStartChallenge={handleStartChallenge}
             onBreakStreak={handleBreakStreak}
-            onRetry={bootstrap}
-            networkError={networkError}
           />
         )}
       </SafeAreaView>

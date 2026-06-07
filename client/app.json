@@ -1,12 +1,12 @@
 {
   "expo": {
     "name": "FAB Challenge",
-    "slug": "fab-challenge",
+    "slug": "fab",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "projectId": "00000000-0000-4000-8000-fab000000001",
+    "projectId": "b1a30335-fcd2-4a99-9b68-e933974205fd",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -35,7 +35,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "00000000-0000-4000-8000-fab000000001"
+        "projectId": "b1a30335-fcd2-4a99-9b68-e933974205fd"
       }
     },
     "plugins": [
