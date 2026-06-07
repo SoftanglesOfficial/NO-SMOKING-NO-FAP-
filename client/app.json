@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "FAB Challenge",
+    "slug": "fab-challenge",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "projectId": "00000000-0000-4000-8000-fab000000001",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#050505"
+    },
+    "ios": {
+      "bundleIdentifier": "com.fab.challenge",
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.fab.challenge",
+      "adaptiveIcon": {
+        "backgroundColor": "#050505",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "statusBar": {
+        "backgroundColor": "#050505",
+        "barStyle": "light-content"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "00000000-0000-4000-8000-fab000000001"
+      }
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#39FF14",
+          "defaultChannel": "fab-heads-up",
+          "enableBackgroundRemoteNotifications": false
+        }
+      ]
+    ]
+  }
+}
