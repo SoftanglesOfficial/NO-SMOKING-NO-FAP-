@@ -11,10 +11,17 @@ import {
 } from './notificationContent';
 
 const ANDROID_CHANNEL_ID = 'fab-heads-up';
-const EVENING_REMINDER_8PM_ID = 'fab-evening-reminder-8pm';
-const EVENING_REMINDER_9PM_ID = 'fab-evening-reminder-9pm';
+const LEGACY_EVENING_REMINDER_8PM_ID = 'fab-evening-reminder-8pm';
+const LEGACY_EVENING_REMINDER_9PM_ID = 'fab-evening-reminder-9pm';
 
 export const EVENING_REMINDER_HOURS = [20, 21] as const;
+
+function getReminderIds(challengeId: string) {
+  return {
+    eight: `fab-evening-reminder-8pm-${challengeId}`,
+    nine: `fab-evening-reminder-9pm-${challengeId}`,
+  };
+}
 
 export type NotificationPermissionStatus =
   | 'granted'
@@ -201,6 +208,7 @@ export class NotificationService {
   }
 
   static async scheduleDailyReminder(
+    challengeId: string,
     challengeName: string,
     currentStreak: number,
   ): Promise<void> {
@@ -218,17 +226,16 @@ export class NotificationService {
 
       const dayCount = getStreakDayCount(currentStreak);
       const title = getNotificationTitle(challengeName);
+      const reminderIds = getReminderIds(challengeId);
 
       await LocalNotifications.cancelScheduledNotificationAsync(
-        EVENING_REMINDER_8PM_ID,
+        reminderIds.eight,
       );
-      await LocalNotifications.cancelScheduledNotificationAsync(
-        EVENING_REMINDER_9PM_ID,
-      );
+      await LocalNotifications.cancelScheduledNotificationAsync(reminderIds.nine);
 
       const schedules = [
-        { id: EVENING_REMINDER_8PM_ID, hour: EVENING_REMINDER_HOURS[0] },
-        { id: EVENING_REMINDER_9PM_ID, hour: EVENING_REMINDER_HOURS[1] },
+        { id: reminderIds.eight, hour: EVENING_REMINDER_HOURS[0] },
+        { id: reminderIds.nine, hour: EVENING_REMINDER_HOURS[1] },
       ] as const;
 
       for (const schedule of schedules) {
@@ -250,20 +257,59 @@ export class NotificationService {
     }
   }
 
-  static async cancelDailyReminder(): Promise<void> {
+  static async cancelDailyReminder(challengeId: string): Promise<void> {
+    if (!canUseNotifications()) {
+      return;
+    }
+
+    try {
+      const reminderIds = getReminderIds(challengeId);
+      await LocalNotifications.cancelScheduledNotificationAsync(
+        reminderIds.eight,
+      );
+      await LocalNotifications.cancelScheduledNotificationAsync(reminderIds.nine);
+    } catch (error) {
+      console.log('[FAB Challenge] cancelDailyReminder failed:', error);
+    }
+  }
+
+  static async cancelLegacyReminders(): Promise<void> {
     if (!canUseNotifications()) {
       return;
     }
 
     try {
       await LocalNotifications.cancelScheduledNotificationAsync(
-        EVENING_REMINDER_8PM_ID,
+        LEGACY_EVENING_REMINDER_8PM_ID,
       );
       await LocalNotifications.cancelScheduledNotificationAsync(
-        EVENING_REMINDER_9PM_ID,
+        LEGACY_EVENING_REMINDER_9PM_ID,
       );
     } catch (error) {
-      console.log('[FAB Challenge] cancelDailyReminder failed:', error);
+      console.log('[FAB Challenge] cancelLegacyReminders failed:', error);
+    }
+  }
+
+  static async syncReminders(
+    challenges: Array<{
+      id: string;
+      name: string;
+      currentStreak: number;
+      isActive: boolean;
+    }>,
+  ): Promise<void> {
+    await this.cancelLegacyReminders();
+
+    for (const challenge of challenges) {
+      if (challenge.isActive) {
+        await this.scheduleDailyReminder(
+          challenge.id,
+          challenge.name,
+          challenge.currentStreak,
+        );
+      } else {
+        await this.cancelDailyReminder(challenge.id);
+      }
     }
   }
 }

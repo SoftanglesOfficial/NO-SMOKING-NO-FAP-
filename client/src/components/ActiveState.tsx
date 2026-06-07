@@ -40,7 +40,7 @@ export function ActiveState({
         <Text style={styles.header}>Your Streak</Text>
         <StreakCounter
           streak={challenge.currentStreak}
-          challengeName={challenge.challengeName}
+          name={challenge.name}
         />
       </View>
 

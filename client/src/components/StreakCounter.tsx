@@ -6,10 +6,10 @@ import { streakCardShadow } from '../utils/platform';
 
 interface StreakCounterProps {
   streak: number;
-  challengeName: string;
+  name: string;
 }
 
-export function StreakCounter({ streak, challengeName }: StreakCounterProps) {
+export function StreakCounter({ streak, name }: StreakCounterProps) {
   return (
     <View style={styles.wrapper}>
       <View style={[styles.ring, streakCardShadow()]}>
@@ -21,7 +21,7 @@ export function StreakCounter({ streak, challengeName }: StreakCounterProps) {
           </Text>
         </View>
       </View>
-      <Text style={styles.challengeName}>{challengeName.toUpperCase()}</Text>
+      <Text style={styles.challengeName}>{name.toUpperCase()}</Text>
     </View>
   );
 }

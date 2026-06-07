@@ -1,49 +1,111 @@
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import { ActiveState } from '../components/ActiveState';
-import { EmptyState } from '../components/EmptyState';
-import { PersonalBest } from '../components/PersonalBest';
-import { Challenge } from '../types/challenge';
+import React, { useEffect, useRef } from 'react';
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { ChallengeListScreen } from './ChallengeListScreen';
+import { ChallengeDetailScreen } from './ChallengeDetailScreen';
+import { AddChallengeScreen } from './AddChallengeScreen';
+import { AppScreen, Challenge } from '../types/challenge';
 import { colors, spacing } from '../theme/colors';
 
 interface HomeScreenProps {
-  challenge: Challenge | null;
+  screen: AppScreen;
+  challenges: Challenge[];
+  selectedChallenge: Challenge | null;
   actionLoading: boolean;
   error?: string | null;
-  onStartChallenge: (challengeName: string) => Promise<void>;
-  onBreakStreak: () => Promise<void>;
+  onNavigate: (screen: AppScreen) => void;
+  onSelectChallenge: (challenge: Challenge) => void;
+  onAddChallenge: (name: string) => Promise<void>;
+  onBreakStreak: (id: string) => Promise<void>;
+  onDeleteChallenge: (id: string) => Promise<void>;
 }
 
 export function HomeScreen({
-  challenge,
+  screen,
+  challenges,
+  selectedChallenge,
   actionLoading,
   error = null,
-  onStartChallenge,
+  onNavigate,
+  onSelectChallenge,
+  onAddChallenge,
   onBreakStreak,
+  onDeleteChallenge,
 }: HomeScreenProps) {
-  const isActive = challenge?.isActive ?? false;
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const previousScreen = useRef<AppScreen>(screen);
+
+  useEffect(() => {
+    if (previousScreen.current === screen) {
+      return;
+    }
+
+    fadeAnim.setValue(0);
+    slideAnim.setValue(screen === 'list' ? -16 : 16);
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 220,
+        easing: Easing.out(Easing.cubic),
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    previousScreen.current = screen;
+  }, [fadeAnim, screen, slideAnim]);
+
+  const content = (() => {
+    if (screen === 'add') {
+      return (
+        <AddChallengeScreen
+          loading={actionLoading}
+          onBack={() => onNavigate('list')}
+          onAddChallenge={onAddChallenge}
+        />
+      );
+    }
+
+    if (screen === 'detail' && selectedChallenge) {
+      return (
+        <ChallengeDetailScreen
+          challenge={selectedChallenge}
+          loading={actionLoading}
+          onBack={() => onNavigate('list')}
+          onBreakStreak={() => onBreakStreak(selectedChallenge.id)}
+        />
+      );
+    }
+
+    return (
+      <ChallengeListScreen
+        challenges={challenges}
+        onSelectChallenge={onSelectChallenge}
+        onAddChallenge={() => onNavigate('add')}
+        onDeleteChallenge={(challenge) => onDeleteChallenge(challenge.id)}
+      />
+    );
+  })();
 
   return (
     <View style={styles.flex}>
-      {isActive && challenge ? (
-        <ActiveState
-          challenge={challenge}
-          onBreakStreak={onBreakStreak}
-          loading={actionLoading}
-        />
-      ) : challenge && !isActive ? (
-        <View style={styles.inactiveContainer}>
-          <EmptyState onStart={onStartChallenge} loading={actionLoading} />
-          <View style={styles.inactiveFooter}>
-            <PersonalBest highestStreak={challenge.highestStreak} />
-            <Text style={styles.inactiveHint}>
-              Start a new challenge to beat your record
-            </Text>
-          </View>
-        </View>
-      ) : (
-        <EmptyState onStart={onStartChallenge} loading={actionLoading} />
-      )}
+      <Animated.View
+        style={[
+          styles.flex,
+          {
+            opacity: fadeAnim,
+            transform: [{ translateX: slideAnim }],
+          },
+        ]}
+      >
+        {content}
+      </Animated.View>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
     </View>
@@ -53,19 +115,6 @@ export function HomeScreen({
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
-  },
-  inactiveContainer: {
-    flex: 1,
-  },
-  inactiveFooter: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  inactiveHint: {
-    color: colors.textMuted,
-    fontSize: 13,
-    textAlign: 'center',
   },
   errorText: {
     color: colors.danger,
