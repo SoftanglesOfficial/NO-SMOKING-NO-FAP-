@@ -6,22 +6,16 @@ import {
   LocalNotifications,
 } from './localNotifications';
 import {
-  getMotivationalMessage,
+  generatePersonalizedNotif,
   getNotificationTitle,
 } from './notificationContent';
 
-const ANDROID_CHANNEL_ID = 'fab-heads-up';
-const LEGACY_EVENING_REMINDER_8PM_ID = 'fab-evening-reminder-8pm';
-const LEGACY_EVENING_REMINDER_9PM_ID = 'fab-evening-reminder-9pm';
+const ANDROID_CHANNEL_ID = 'nfc-heads-up';
+const MORNING_REMINDER_ID = 'nfc-daily-reminder-morning';
+const EVENING_REMINDER_8PM_ID = 'nfc-daily-reminder-8pm';
+const EVENING_REMINDER_9PM_ID = 'nfc-daily-reminder-9pm';
 
-export const EVENING_REMINDER_HOURS = [20, 21] as const;
-
-function getReminderIds(challengeId: string) {
-  return {
-    eight: `fab-evening-reminder-8pm-${challengeId}`,
-    nine: `fab-evening-reminder-9pm-${challengeId}`,
-  };
-}
+export const DAILY_REMINDER_HOURS = [9, 20, 21] as const;
 
 export type NotificationPermissionStatus =
   | 'granted'
@@ -53,7 +47,7 @@ function ensureHandlerConfigured(): void {
     configureLocalNotificationHandler();
     handlerReady = true;
   } catch (error) {
-    console.log('[FAB Challenge] Notification handler setup failed:', error);
+    console.log('[No Fap Challenge] Notification handler setup failed:', error);
     notificationsAvailable = false;
   }
 }
@@ -103,7 +97,7 @@ export class NotificationService {
       ensureHandlerConfigured();
       return await this.requestPermissions();
     } catch (error) {
-      console.log('[FAB Challenge] requestPermissionsOnLaunch failed:', error);
+      console.log('[No Fap Challenge] requestPermissionsOnLaunch failed:', error);
       this.permissionStatus = 'unsupported';
       return 'unsupported';
     }
@@ -120,8 +114,9 @@ export class NotificationService {
 
     try {
       await LocalNotifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
-        name: 'FAB Challenge Alerts',
-        description: 'Personalized streak reminders when temptation hits hardest',
+        name: 'No Fap Challenge Alerts',
+        description:
+          'Personalized daily reminders to keep your streak alive',
         importance: LocalNotifications.AndroidImportance.MAX,
         enableVibrate: true,
         vibrationPattern: [0, 300, 200, 300],
@@ -133,7 +128,7 @@ export class NotificationService {
           LocalNotifications.AndroidNotificationVisibility.PUBLIC,
       });
     } catch (error) {
-      console.log('[FAB Challenge] ensureAndroidChannel failed:', error);
+      console.log('[No Fap Challenge] ensureAndroidChannel failed:', error);
     }
   }
 
@@ -197,7 +192,7 @@ export class NotificationService {
       this.permissionStatus = 'denied';
       return 'denied';
     } catch (error) {
-      console.log('[FAB Challenge] requestPermissions failed:', error);
+      console.log('[No Fap Challenge] requestPermissions failed:', error);
       this.permissionStatus = 'unsupported';
       return 'unsupported';
     }
@@ -208,8 +203,7 @@ export class NotificationService {
   }
 
   static async scheduleDailyReminder(
-    challengeId: string,
-    challengeName: string,
+    userName: string,
     currentStreak: number,
   ): Promise<void> {
     if (!canUseNotifications()) {
@@ -225,21 +219,20 @@ export class NotificationService {
       }
 
       const dayCount = getStreakDayCount(currentStreak);
-      const title = getNotificationTitle(challengeName);
-      const reminderIds = getReminderIds(challengeId);
-
-      await LocalNotifications.cancelScheduledNotificationAsync(
-        reminderIds.eight,
-      );
-      await LocalNotifications.cancelScheduledNotificationAsync(reminderIds.nine);
+      const title = getNotificationTitle(userName);
 
       const schedules = [
-        { id: reminderIds.eight, hour: EVENING_REMINDER_HOURS[0] },
-        { id: reminderIds.nine, hour: EVENING_REMINDER_HOURS[1] },
+        { id: MORNING_REMINDER_ID, hour: DAILY_REMINDER_HOURS[0] },
+        { id: EVENING_REMINDER_8PM_ID, hour: DAILY_REMINDER_HOURS[1] },
+        { id: EVENING_REMINDER_9PM_ID, hour: DAILY_REMINDER_HOURS[2] },
       ] as const;
 
       for (const schedule of schedules) {
-        const body = getMotivationalMessage(challengeName, dayCount);
+        await LocalNotifications.cancelScheduledNotificationAsync(schedule.id);
+      }
+
+      for (const schedule of schedules) {
+        const body = generatePersonalizedNotif(userName, dayCount);
 
         await LocalNotifications.scheduleNotificationAsync({
           identifier: schedule.id,
@@ -253,63 +246,27 @@ export class NotificationService {
         });
       }
     } catch (error) {
-      console.log('[FAB Challenge] scheduleDailyReminder failed:', error);
+      console.log('[No Fap Challenge] scheduleDailyReminder failed:', error);
     }
   }
 
-  static async cancelDailyReminder(challengeId: string): Promise<void> {
-    if (!canUseNotifications()) {
-      return;
-    }
-
-    try {
-      const reminderIds = getReminderIds(challengeId);
-      await LocalNotifications.cancelScheduledNotificationAsync(
-        reminderIds.eight,
-      );
-      await LocalNotifications.cancelScheduledNotificationAsync(reminderIds.nine);
-    } catch (error) {
-      console.log('[FAB Challenge] cancelDailyReminder failed:', error);
-    }
-  }
-
-  static async cancelLegacyReminders(): Promise<void> {
+  static async cancelDailyReminder(): Promise<void> {
     if (!canUseNotifications()) {
       return;
     }
 
     try {
       await LocalNotifications.cancelScheduledNotificationAsync(
-        LEGACY_EVENING_REMINDER_8PM_ID,
+        MORNING_REMINDER_ID,
       );
       await LocalNotifications.cancelScheduledNotificationAsync(
-        LEGACY_EVENING_REMINDER_9PM_ID,
+        EVENING_REMINDER_8PM_ID,
+      );
+      await LocalNotifications.cancelScheduledNotificationAsync(
+        EVENING_REMINDER_9PM_ID,
       );
     } catch (error) {
-      console.log('[FAB Challenge] cancelLegacyReminders failed:', error);
-    }
-  }
-
-  static async syncReminders(
-    challenges: Array<{
-      id: string;
-      name: string;
-      currentStreak: number;
-      isActive: boolean;
-    }>,
-  ): Promise<void> {
-    await this.cancelLegacyReminders();
-
-    for (const challenge of challenges) {
-      if (challenge.isActive) {
-        await this.scheduleDailyReminder(
-          challenge.id,
-          challenge.name,
-          challenge.currentStreak,
-        );
-      } else {
-        await this.cancelDailyReminder(challenge.id);
-      }
+      console.log('[No Fap Challenge] cancelDailyReminder failed:', error);
     }
   }
 }

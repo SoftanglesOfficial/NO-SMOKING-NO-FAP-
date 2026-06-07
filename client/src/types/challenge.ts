@@ -1,14 +1,13 @@
 export interface StoredChallenge {
-  id: string;
-  name: string;
+  challengeName: string;
   startDate: string;
   lastResetDate: string;
-  isActive: boolean;
   highestStreak: number;
+  isActive: boolean;
 }
 
 export interface Challenge extends StoredChallenge {
   currentStreak: number;
 }
 
-export type AppScreen = 'list' | 'detail' | 'add';
+export type AppFlow = 'onboarding' | 'setup' | 'streak';

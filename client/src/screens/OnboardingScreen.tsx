@@ -10,26 +10,30 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Sparkles } from 'lucide-react-native';
-import { GlowButton } from './GlowButton';
+import { Shield } from 'lucide-react-native';
+import { GlowButton } from '../components/GlowButton';
 import { colors, spacing, typography } from '../theme/colors';
 
-interface EmptyStateProps {
-  onStart: (challengeName: string) => Promise<void>;
+interface OnboardingScreenProps {
   loading?: boolean;
+  onComplete: (userName: string) => Promise<void>;
 }
 
-export function EmptyState({ onStart, loading = false }: EmptyStateProps) {
-  const [challengeName, setChallengeName] = useState('');
+export function OnboardingScreen({
+  loading = false,
+  onComplete,
+}: OnboardingScreenProps) {
+  const [userName, setUserName] = useState('');
   const insets = useSafeAreaInsets();
 
-  const handleStart = async () => {
-    const trimmed = challengeName.trim();
+  const handleContinue = async () => {
+    const trimmed = userName.trim();
     if (!trimmed) {
       return;
     }
+
     Keyboard.dismiss();
-    await onStart(trimmed);
+    await onComplete(trimmed);
   };
 
   return (
@@ -41,35 +45,35 @@ export function EmptyState({ onStart, loading = false }: EmptyStateProps) {
       <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
         <View style={styles.container}>
           <View style={styles.iconWrap}>
-            <Sparkles size={40} color={colors.primary} strokeWidth={1.5} />
+            <Shield size={40} color={colors.primary} strokeWidth={1.5} />
           </View>
 
-          <Text style={styles.title}>FAB Challenge</Text>
+          <Text style={styles.title}>Welcome to Your Legacy</Text>
           <Text style={styles.subtitle}>
-            Name your challenge. Build your legacy. One day at a time.
+            Every warrior starts with a name. Claim yours and begin the journey.
           </Text>
 
           <View style={styles.inputWrap}>
-            <Text style={styles.inputLabel}>Challenge Name</Text>
+            <Text style={styles.inputLabel}>Enter your name, Warrior</Text>
             <TextInput
               style={styles.input}
-              placeholder="e.g. No Sugar, Gym Daily, Read 30min"
+              placeholder="Your name"
               placeholderTextColor={colors.textMuted}
-              value={challengeName}
-              onChangeText={setChallengeName}
+              value={userName}
+              onChangeText={setUserName}
               autoCapitalize="words"
               autoCorrect={false}
               returnKeyType="done"
-              onSubmitEditing={handleStart}
+              onSubmitEditing={handleContinue}
               editable={!loading}
             />
           </View>
 
           <GlowButton
-            label="Start Your Legacy"
-            onPress={handleStart}
+            label="Continue"
+            onPress={handleContinue}
             loading={loading}
-            disabled={!challengeName.trim()}
+            disabled={!userName.trim()}
             style={styles.button}
           />
         </View>
@@ -89,9 +93,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   iconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 84,
+    height: 84,
+    borderRadius: 42,
     backgroundColor: colors.primaryMuted,
     alignItems: 'center',
     justifyContent: 'center',
@@ -101,9 +105,10 @@ const styles = StyleSheet.create({
   },
   title: {
     color: colors.text,
-    fontSize: 32,
+    fontSize: 34,
     fontWeight: '900',
-    letterSpacing: 1,
+    letterSpacing: 0.5,
+    textAlign: 'center',
     marginBottom: spacing.sm,
   },
   subtitle: {
@@ -122,8 +127,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: typography.caption,
     fontWeight: '600',
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
+    letterSpacing: 1.2,
     marginBottom: spacing.sm,
   },
   input: {

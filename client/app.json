@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "FAB Challenge",
+    "name": "No Fap Challenge App",
     "slug": "fab",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -44,7 +44,7 @@
         {
           "icon": "./assets/icon.png",
           "color": "#39FF14",
-          "defaultChannel": "fab-heads-up",
+          "defaultChannel": "nfc-heads-up",
           "enableBackgroundRemoteNotifications": false
         }
       ]

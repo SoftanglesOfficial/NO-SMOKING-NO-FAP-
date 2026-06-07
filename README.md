@@ -1,13 +1,19 @@
-# FAB Challenge
+# No Fap Challenge App
 
-A standalone streak-tracking mobile app built with Expo and React Native. All data lives on your device — no server required.
+A premium standalone streak-tracking app built with Expo and React Native. All data lives on your device — no server required.
+
+## User flow
+
+1. **Onboarding** — Enter your name ("Welcome to Your Legacy")
+2. **Challenge setup** — Activate the hardcoded **No Smoking Challenge**
+3. **Streak screen** — Track days, break streak, view personal best
 
 ## Features
 
-- **Local persistence** — AsyncStorage saves your challenge, streak, and personal best
+- **Local persistence** — AsyncStorage saves your name, challenge, and streak
 - **Streak tracking** — Calculated on-device with `date-fns` every time the app opens
-- **Evening reminders** — Personalized motivational notifications at 8 PM & 9 PM
-- **Premium FAB UI** — Neon dark theme, haptics, glowing streak counter
+- **Personalized notifications** — Daily heads-up reminders using your name (9 AM, 8 PM, 9 PM)
+- **Premium UI** — Deep black (#050505) with neon green (#39FF14) accents
 
 ## Quick start
 
@@ -24,22 +30,15 @@ cd client
 eas build --platform android --profile preview
 ```
 
-Or for production:
-
-```bash
-eas build --platform android --profile production
-```
-
 ## Data model
 
-Stored locally on device:
-
-| Field | Description |
-|-------|-------------|
-| `challengeName` | Name of your challenge |
-| `startDate` | When the challenge began |
-| `lastResetDate` | Used to calculate current streak |
-| `highestStreak` | Personal best record |
-| `isActive` | Whether a challenge is in progress |
+| Key | Field | Description |
+|-----|-------|-------------|
+| User | `userName` | Warrior name from onboarding |
+| Challenge | `challengeName` | Always "No Smoking Challenge" |
+| Challenge | `startDate` | When the challenge was activated |
+| Challenge | `lastResetDate` | Used to calculate current streak |
+| Challenge | `highestStreak` | Personal best record |
+| Challenge | `isActive` | Whether the streak is running |
 
 Streak formula: `today - lastResetDate` (calendar days)
