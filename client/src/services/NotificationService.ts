@@ -1,6 +1,8 @@
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import { Linking, Platform } from 'react-native';
+import { activeApp } from '../constants/app';
+import { getNotificationChannelId } from '../../MasterConfig';
 import {
   configureLocalNotificationHandler,
   LocalNotifications,
@@ -10,10 +12,10 @@ import {
   getNotificationTitle,
 } from './notificationContent';
 
-const ANDROID_CHANNEL_ID = 'nfc-heads-up';
-const MORNING_REMINDER_ID = 'nfc-daily-reminder-morning';
-const EVENING_REMINDER_8PM_ID = 'nfc-daily-reminder-8pm';
-const EVENING_REMINDER_9PM_ID = 'nfc-daily-reminder-9pm';
+const ANDROID_CHANNEL_ID = getNotificationChannelId(activeApp.slug);
+const MORNING_REMINDER_ID = `${activeApp.slug}-daily-reminder-morning`;
+const EVENING_REMINDER_8PM_ID = `${activeApp.slug}-daily-reminder-8pm`;
+const EVENING_REMINDER_9PM_ID = `${activeApp.slug}-daily-reminder-9pm`;
 
 export const DAILY_REMINDER_HOURS = [9, 20, 21] as const;
 
@@ -25,6 +27,10 @@ export type NotificationPermissionStatus =
 
 let notificationsAvailable = Platform.OS === 'ios' || Platform.OS === 'android';
 let handlerReady = false;
+
+function logLabel(): string {
+  return `[${activeApp.appName}]`;
+}
 
 function isAndroidEmulator(): boolean {
   return Platform.OS === 'android' && !Device.isDevice;
@@ -47,7 +53,7 @@ function ensureHandlerConfigured(): void {
     configureLocalNotificationHandler();
     handlerReady = true;
   } catch (error) {
-    console.log('[No Fap Challenge] Notification handler setup failed:', error);
+    console.log(`${logLabel()} Notification handler setup failed:`, error);
     notificationsAvailable = false;
   }
 }
@@ -63,7 +69,7 @@ function buildNotificationContent(title: string, body: string) {
           channelId: ANDROID_CHANNEL_ID,
           priority: LocalNotifications.AndroidNotificationPriority.MAX,
           vibrate: [0, 300, 200, 300],
-          color: '#39FF14',
+          color: activeApp.themeColor,
         }
       : {
           interruptionLevel: 'timeSensitive' as const,
@@ -97,7 +103,7 @@ export class NotificationService {
       ensureHandlerConfigured();
       return await this.requestPermissions();
     } catch (error) {
-      console.log('[No Fap Challenge] requestPermissionsOnLaunch failed:', error);
+      console.log(`${logLabel()} requestPermissionsOnLaunch failed:`, error);
       this.permissionStatus = 'unsupported';
       return 'unsupported';
     }
@@ -114,13 +120,13 @@ export class NotificationService {
 
     try {
       await LocalNotifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
-        name: 'No Fap Challenge Alerts',
+        name: `${activeApp.appName} Alerts`,
         description:
           'Personalized daily reminders to keep your streak alive',
         importance: LocalNotifications.AndroidImportance.MAX,
         enableVibrate: true,
         vibrationPattern: [0, 300, 200, 300],
-        lightColor: '#39FF14',
+        lightColor: activeApp.themeColor,
         sound: 'default',
         showBadge: true,
         bypassDnd: false,
@@ -128,7 +134,7 @@ export class NotificationService {
           LocalNotifications.AndroidNotificationVisibility.PUBLIC,
       });
     } catch (error) {
-      console.log('[No Fap Challenge] ensureAndroidChannel failed:', error);
+      console.log(`${logLabel()} ensureAndroidChannel failed:`, error);
     }
   }
 
@@ -192,7 +198,7 @@ export class NotificationService {
       this.permissionStatus = 'denied';
       return 'denied';
     } catch (error) {
-      console.log('[No Fap Challenge] requestPermissions failed:', error);
+      console.log(`${logLabel()} requestPermissions failed:`, error);
       this.permissionStatus = 'unsupported';
       return 'unsupported';
     }
@@ -220,6 +226,7 @@ export class NotificationService {
 
       const dayCount = getStreakDayCount(currentStreak);
       const title = getNotificationTitle(userName);
+      const challengeName = activeApp.challengeName;
 
       const schedules = [
         { id: MORNING_REMINDER_ID, hour: DAILY_REMINDER_HOURS[0] },
@@ -232,7 +239,11 @@ export class NotificationService {
       }
 
       for (const schedule of schedules) {
-        const body = generatePersonalizedNotif(userName, dayCount);
+        const body = generatePersonalizedNotif(
+          userName,
+          dayCount,
+          challengeName,
+        );
 
         await LocalNotifications.scheduleNotificationAsync({
           identifier: schedule.id,
@@ -246,7 +257,7 @@ export class NotificationService {
         });
       }
     } catch (error) {
-      console.log('[No Fap Challenge] scheduleDailyReminder failed:', error);
+      console.log(`${logLabel()} scheduleDailyReminder failed:`, error);
     }
   }
 
@@ -266,7 +277,7 @@ export class NotificationService {
         EVENING_REMINDER_9PM_ID,
       );
     } catch (error) {
-      console.log('[No Fap Challenge] cancelDailyReminder failed:', error);
+      console.log(`${logLabel()} cancelDailyReminder failed:`, error);
     }
   }
 }

@@ -1,44 +1,57 @@
-# No Fap Challenge App
+# Challenge App Monorepo (White-Label)
 
-A premium standalone streak-tracking app built with Expo and React Native. All data lives on your device — no server required.
+One codebase powers 160+ standalone challenge apps. Each variant is configured in `client/MasterConfig.ts` and built with `APP_VARIANT`.
 
-## User flow
+## White-label architecture
 
-1. **Onboarding** — Enter your name ("Welcome to Your Legacy")
-2. **Challenge setup** — Activate the hardcoded **No Smoking Challenge**
-3. **Streak screen** — Track days, break streak, view personal best
+| File | Purpose |
+|------|---------|
+| `client/MasterConfig.ts` | Registry of all app variants (`slug`, `appName`, `challengeName`, `themeColor`) |
+| `client/app.config.js` | Reads `APP_VARIANT` and applies name, package, icon, theme |
+| `client/src/constants/app.ts` | Runtime config injected via Expo `extra` |
+| `client/assets/branding/<slug>/` | Per-app icons and splash assets |
 
-## Features
-
-- **Local persistence** — AsyncStorage saves your name, challenge, and streak
-- **Streak tracking** — Calculated on-device with `date-fns` every time the app opens
-- **Personalized notifications** — Daily heads-up reminders using your name (9 AM, 8 PM, 9 PM)
-- **Premium UI** — Deep black (#050505) with neon green (#39FF14) accents
-
-## Quick start
+## Run / build a variant
 
 ```bash
 cd client
-npm install
+
+# Default variant (no-fap)
 npx expo start
+
+# Specific variant
+APP_VARIANT=no-junk-food npx expo start
+APP_VARIANT=no-junk-food eas build --platform android --profile preview
 ```
 
-## Production build (APK)
+## Branding folders (required)
 
-```bash
-cd client
-eas build --platform android --profile preview
+For **each slug** in `MasterConfig.ts`, create:
+
+```
+client/assets/branding/<slug>/icon.png
 ```
 
-## Data model
+Example:
 
-| Key | Field | Description |
-|-----|-------|-------------|
-| User | `userName` | Warrior name from onboarding |
-| Challenge | `challengeName` | Always "No Smoking Challenge" |
-| Challenge | `startDate` | When the challenge was activated |
-| Challenge | `lastResetDate` | Used to calculate current streak |
-| Challenge | `highestStreak` | Personal best record |
-| Challenge | `isActive` | Whether the streak is running |
+```
+client/assets/branding/no-fap/icon.png
+client/assets/branding/no-junk-food/icon.png
+client/assets/branding/no-sugar/icon.png
+```
 
-Streak formula: `today - lastResetDate` (calendar days)
+See `client/assets/branding/README.md` for optional splash and Android adaptive icons.
+
+## Add a new app
+
+1. Add an entry to `VARIANT_LIST` in `MasterConfig.ts`
+2. Create `assets/branding/<slug>/icon.png`
+3. Build with `APP_VARIANT=<slug> eas build ...`
+
+## User flow (all variants)
+
+1. **Onboarding** — Enter name
+2. **Setup** — Activate hardcoded `challengeName` for that variant
+3. **Streak** — Track days, break streak, personal best
+
+All data stored locally via AsyncStorage. No backend.
