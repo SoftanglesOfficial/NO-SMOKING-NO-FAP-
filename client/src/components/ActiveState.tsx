@@ -3,7 +3,7 @@ import { Alert, StyleSheet, Text, View } from 'react-native';
 import { GlowButton } from './GlowButton';
 import { PersonalBest } from './PersonalBest';
 import { StreakCounter } from './StreakCounter';
-import { CHALLENGE_NAME } from '../constants/app';
+import { CHALLENGE_NAME, getGreetingTag } from '../constants/app';
 import { colors, spacing, typography } from '../theme/colors';
 import { Challenge } from '../types/challenge';
 
@@ -39,7 +39,9 @@ export function ActiveState({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.greeting}>Stay FAP, {userName}</Text>
+      <Text style={styles.greeting}>
+        Stay {getGreetingTag()}, {userName}
+      </Text>
 
       <View style={styles.main}>
         <Text style={styles.header}>{CHALLENGE_NAME}</Text>
